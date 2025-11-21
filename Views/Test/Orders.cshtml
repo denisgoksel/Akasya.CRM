@@ -6,9 +6,12 @@
 
 <h2>Sipariş API Testi</h2>
 
-<div class="alert alert-info">
-    @ViewBag.Message
-</div>
+@if (!string.IsNullOrEmpty(ViewBag.Message))
+{
+    <div class="alert alert-info">
+        @ViewBag.Message
+    </div>
+}
 
 @if (Model != null && Model.Any())
 {
@@ -29,12 +32,12 @@
                 <tr>
                     <td>@order.ID</td>
                     <td>@order.CODE</td>
-                    <td>@order.DATE_.ToString("dd.MM.yyyy")</td>
+                    <td>@(order.DATE_.HasValue? order.DATE_.Value.ToString("dd.MM.yyyy") : "-")</td>
                     <td>@order.CLIENTREF</td>
-                    <td>@order.TOTAL.ToString("C2")</td>
+                    <td>@(order.TOTAL.HasValue? order.TOTAL.Value.ToString("C2") : "-")</td>
                     <td>
-                        <span class="badge bg-@(order.ACTIVE ? "success" : "secondary")">
-                            @(order.ACTIVE ? "Aktif" : "Pasif")
+                        <span class="badge bg-@(order.STATUS == "Açık" ? "success" : "secondary")">
+                            @order.STATUS
                         </span>
                     </td>
                 </tr>
