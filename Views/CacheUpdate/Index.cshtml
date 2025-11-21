@@ -1,0 +1,406 @@
+﻿@model Akasya.CRM.Web.Controllers.CacheUpdateViewModel
+@{
+    ViewData["Title"] = "Cache Yönetimi";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="display-4">Cache Yönetimi</h1>
+            <p class="lead">Cache servislerini manuel olarak güncelleyin</p>
+            <hr />
+
+            <!-- Mesajlar -->
+            <div id="alertContainer"></div>
+
+            <!-- Progress Bar -->
+            <div id="progressContainer" class="d-none">
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-sync-alt fa-spin"></i> İşlem Devam Ediyor
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="progress mb-3">
+                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                                 role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <p id="progressText" class="mb-0">İşlem başlatılıyor...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Log Container -->
+            <div id="logContainer" class="d-none">
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-terminal"></i> İşlem Logları
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="logContent" style="max-height: 300px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.9em;">
+                            <!-- Loglar buraya gelecek -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Tümünü Güncelle Butonu -->
+            @if (User.IsInRole("Admin"))
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-sync-alt"></i> Tüm Cache'leri Güncelle
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Tüm cache servislerini sırayla günceller. Bu işlem biraz zaman alabilir.</p>
+                        <button id="updateAllBtn" class="btn btn-primary">
+                            <i class="fas fa-play"></i> Tümünü Güncelle
+                        </button>
+                    </div>
+                </div>
+            }
+
+            <!-- Servis Listesi -->
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list"></i> Cache Servisleri
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.Services != null && Model.Services.Any())
+                    {
+                        <div id="servicesList">
+                            @foreach (var serviceName in Model.Services)
+                            {
+                                var lastResult = Model.LastResults.ContainsKey(serviceName) ? Model.LastResults[serviceName] : null;
+
+                                <div class="list-group-item d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <h6 class="mb-1">@serviceName</h6>
+                                        @if (lastResult != null)
+                                        {
+                                            <small class="text-muted">
+                                                Son güncelleme: @lastResult.CompletedAt.ToString("dd.MM.yyyy HH:mm") |
+                                                Süre: @lastResult.Duration.ToString(@"mm\:ss") |
+                                                Kayıt: @lastResult.RecordsProcessed
+                                            </small>
+                                            <br>
+                                            <span class="badge @(lastResult.Success ? "bg-success" : "bg-danger")">
+                                                @(lastResult.Success ? "Başarılı" : "Başarısız")
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-muted">Henüz güncellenmedi</small>
+                                        }
+                                    </div>
+                                    <button type="button" class="btn btn-outline-primary btn-sm update-single-btn"
+                                            data-service="@serviceName">
+                                        <i class="fas fa-sync"></i> Güncelle
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Henüz hiç cache servisi tanımlanmamış.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <!-- Durum Bilgisi -->
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle"></i> Sistem Durumu
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <strong>Toplam Servis:</strong>
+                            <span class="badge bg-primary" id="totalServices">@(Model.Services?.Count ?? 0)</span>
+                        </li>
+                        <li class="mb-2">
+                            <strong>Son Kontrol:</strong>
+                            <span class="text-muted" id="lastUpdated">@Model.LastUpdated.ToString("dd.MM.yyyy HH:mm:ss")</span>
+                        </li>
+                        <li class="mb-2">
+                            <strong>Kullanıcı:</strong>
+                            <span class="text-muted">@User.Identity.Name</span>
+                        </li>
+                        <li>
+                            <strong>Rol:</strong>
+                            <span class="badge @(User.IsInRole("Admin") ? "bg-danger" : "bg-success")">
+                                @(User.IsInRole("Admin") ? "Admin" : "User")
+                            </span>
+                        </li>
+                    </ul>
+                    <button id="refreshStatusBtn" class="btn btn-sm btn-outline-info">
+                        <i class="fas fa-redo"></i> Durumu Yenile
+                    </button>
+                </div>
+                <!-- API Test Butonu -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-network-wired"></i> API Bağlantı Testi
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p>API bağlantısını test edin.</p>
+                        <button id="testApiBtn" class="btn btn-warning">
+                            <i class="fas fa-plug"></i> API Testi
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+                // API Test butonu
+        $('#testApiBtn').click(function() {
+            const button = $(this);
+            setButtonState(button, true, '<i class="fas fa-spinner fa-spin"></i> Test Ediliyor...');
+
+            $.ajax({
+                url: '@Url.Action("TestApiConnection", "CacheUpdate")',
+                type: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        showAlert(response.message, 'success');
+                        showLogs([
+                            `🧪 API Test Sonucu: ${response.message}`,
+                            `📊 Müşteri Sayısı: ${response.customerCount}`,
+                            `👤 İlk Müşteri: ${response.firstCustomer}`
+                        ]);
+                    } else {
+                        showAlert(response.message, 'error');
+                        showLogs([`❌ API Test Hatası: ${response.message}`]);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showAlert('API test hatası: ' + error, 'error');
+                    showLogs([`❌ API Test Hatası: ${error}`]);
+                },
+                complete: function() {
+                    setButtonState(button, false, '<i class="fas fa-plug"></i> API Testi');
+                }
+            });
+        });
+        </script>
+    <script>
+        // Alert gösterimi
+        function showAlert(message, type) {
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const alertHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    <strong>${type === 'success' ? 'Başarılı!' : 'Hata!'}</strong> ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            $('#alertContainer').html(alertHtml);
+        }
+
+        // Log gösterimi
+        function showLogs(logs) {
+            if (logs && logs.length > 0) {
+                let logHtml = '';
+                logs.forEach(log => {
+                    const logClass = log.includes('❌') ? 'text-danger' :
+                                    log.includes('✅') ? 'text-success' :
+                                    log.includes('⚠️') ? 'text-warning' : 'text-muted';
+                    logHtml += `<div class="${logClass}">${log}</div>`;
+                });
+                $('#logContent').html(logHtml);
+                $('#logContainer').removeClass('d-none');
+
+                // Scroll to bottom
+                $('#logContent').scrollTop($('#logContent')[0].scrollHeight);
+            }
+        }
+
+        // Progress güncelleme
+        function updateProgress(percentage, text) {
+            $('#progressBar').css('width', percentage + '%');
+            $('#progressText').text(text);
+        }
+
+        // Buton durumunu değiştir
+        function setButtonState(button, disabled, text) {
+            button.prop('disabled', disabled);
+            if (text) {
+                button.html(text);
+            }
+        }
+
+        // Tümünü güncelle
+        $('#updateAllBtn').click(function() {
+            const button = $(this);
+            setButtonState(button, true, '<i class="fas fa-spinner fa-spin"></i> İşleniyor...');
+
+            $('#progressContainer').removeClass('d-none');
+            $('#logContainer').addClass('d-none');
+            updateProgress(10, 'İşlem başlatılıyor...');
+
+            $.ajax({
+                url: '@Url.Action("UpdateAll", "CacheUpdate")',
+                type: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        showAlert(response.message, 'success');
+                        updateProgress(100, 'İşlem tamamlandı!');
+                        if (response.logs) {
+                            showLogs(response.logs);
+                        }
+                    } else {
+                        showAlert(response.message, 'error');
+                        updateProgress(0, 'İşlem başarısız!');
+                        if (response.logs) {
+                            showLogs(response.logs);
+                        }
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showAlert('Sunucu hatası: ' + error, 'error');
+                    updateProgress(0, 'İşlem başarısız!');
+                    showLogs([`❌ Sunucu hatası: ${error}`]);
+                },
+                complete: function() {
+                    setButtonState(button, false, '<i class="fas fa-play"></i> Tümünü Güncelle');
+                    refreshStatus();
+                }
+            });
+        });
+
+        // Tekil güncelleme
+        $(document).on('click', '.update-single-btn', function() {
+            const button = $(this);
+            const serviceName = button.data('service');
+
+            setButtonState(button, true, '<i class="fas fa-spinner fa-spin"></i>');
+            $('#logContainer').addClass('d-none');
+
+            $.ajax({
+                url: '@Url.Action("UpdateSingle", "CacheUpdate")',
+                type: 'POST',
+                data: { serviceName: serviceName },
+                success: function(response) {
+                    if (response.success) {
+                        showAlert(response.message, 'success');
+                        if (response.logs) {
+                            showLogs(response.logs);
+                        }
+                    } else {
+                        showAlert(response.message, 'error');
+                        if (response.logs) {
+                            showLogs(response.logs);
+                        }
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showAlert('Sunucu hatası: ' + error, 'error');
+                    showLogs([`❌ Sunucu hatası: ${error}`]);
+                },
+                complete: function() {
+                    setButtonState(button, false, '<i class="fas fa-sync"></i> Güncelle');
+                    refreshStatus();
+                }
+            });
+        });
+
+        // Durumu yenile
+        function refreshStatus() {
+            $.ajax({
+                url: '@Url.Action("GetStatus", "CacheUpdate")',
+                type: 'GET',
+                success: function(response) {
+                    $('#lastUpdated').text(response.lastUpdated);
+                    $('#totalServices').text(response.services.length);
+                    updateServicesList(response.services, response.lastResults);
+                }
+            });
+        }
+
+        // Servis listesini güncelle
+        function updateServicesList(services, lastResults) {
+            let html = '';
+
+            services.forEach(serviceName => {
+                const lastResult = lastResults[serviceName];
+
+                html += `
+                    <div class="list-group-item d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <h6 class="mb-1">${serviceName}</h6>
+                            ${lastResult ? `
+                                <small class="text-muted">
+                                    Son güncelleme: ${new Date(lastResult.completedAt).toLocaleDateString('tr-TR')} ${new Date(lastResult.completedAt).toLocaleTimeString('tr-TR')} |
+                                    Süre: ${formatDuration(lastResult.duration)} |
+                                    Kayıt: ${lastResult.recordsProcessed}
+                                </small>
+                                <br>
+                                <span class="badge ${lastResult.success ? 'bg-success' : 'bg-danger'}">
+                                    ${lastResult.success ? 'Başarılı' : 'Başarısız'}
+                                </span>
+                            ` : `
+                                <small class="text-muted">Henüz güncellenmedi</small>
+                            `}
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm update-single-btn"
+                                data-service="${serviceName}">
+                            <i class="fas fa-sync"></i> Güncelle
+                        </button>
+                    </div>
+                `;
+            });
+
+            $('#servicesList').html(html);
+        }
+
+        // Duration formatı
+        function formatDuration(duration) {
+            if (!duration) return '00:00';
+            const seconds = Math.floor(duration / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        // Durumu yenile butonu
+        $('#refreshStatusBtn').click(function() {
+            const button = $(this);
+            setButtonState(button, true, '<i class="fas fa-spinner fa-spin"></i>');
+
+            refreshStatus();
+
+            setTimeout(() => {
+                setButtonState(button, false, '<i class="fas fa-redo"></i> Durumu Yenile');
+            }, 1000);
+        });
+
+        // Sayfa yüklendiğinde
+        $(document).ready(function() {
+            console.log('Cache Update sayfası yüklendi');
+        });
+    </script>
+}

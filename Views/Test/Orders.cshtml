@@ -1,0 +1,50 @@
+﻿@model List<Akasya.CRM.Core.Entities.Order>
+
+@{
+    ViewData["Title"] = "Sipariş API Test";
+}
+
+<h2>Sipariş API Testi</h2>
+
+<div class="alert alert-info">
+    @ViewBag.Message
+</div>
+
+@if (Model != null && Model.Any())
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Sipariş No</th>
+                <th>Tarih</th>
+                <th>Müşteri ID</th>
+                <th>Tutar</th>
+                <th>Durum</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var order in Model)
+            {
+                <tr>
+                    <td>@order.ID</td>
+                    <td>@order.CODE</td>
+                    <td>@order.DATE_.ToString("dd.MM.yyyy")</td>
+                    <td>@order.CLIENTREF</td>
+                    <td>@order.TOTAL.ToString("C2")</td>
+                    <td>
+                        <span class="badge bg-@(order.ACTIVE ? "success" : "secondary")">
+                            @(order.ACTIVE ? "Aktif" : "Pasif")
+                        </span>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <div class="alert alert-warning">
+        Sipariş bulunamadı veya API erişilemiyor.
+    </div>
+}

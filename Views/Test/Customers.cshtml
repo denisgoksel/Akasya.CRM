@@ -1,0 +1,150 @@
+﻿@model List<Akasya.CRM.Core.Entities.Customer>
+
+@{
+    ViewData["Title"] = "Müşteri API Test";
+}
+
+<h2>Müşteri API Testi</h2>
+
+<div class="alert @((Model != null && Model.Any()) ? "alert-success" : "alert-warning")">
+    @ViewBag.Message
+</div>
+
+@if (Model != null && Model.Any())
+{
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title">Toplam @Model.Count Müşteri</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Kod</th>
+                            <th>Ünvan</th>
+                            <th>Telefon</th>
+                            <th>E-posta</th>
+                            <th>Şehir</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var customer in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="badge bg-secondary">@customer.ID</span>
+                                </td>
+                                <td>
+                                    <strong>@customer.CODE</strong>
+                                </td>
+                                <td>@customer.DEFINITION_</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(customer.TELEPHONE1))
+                                    {
+                                        <a href="tel:@customer.TELEPHONE1">@customer.TELEPHONE1</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(customer.EMAIL))
+                                    {
+                                        <a href="mailto:@customer.EMAIL">@customer.EMAIL</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>@(string.IsNullOrEmpty(customer.CITY) ? "-" : customer.CITY)</td>
+                                <td>
+                                    <a href="/Test/CustomerDetail?code=@customer.CODE"
+                                       class="btn btn-sm btn-outline-primary"
+                                       title="Müşteri Detayı">
+                                        <i class="fas fa-eye"></i> Detay
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body text-center">
+            <div class="py-4">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">Müşteri Bulunamadı</h4>
+                <p class="text-muted">API bağlantısı başarılı ancak müşteri kaydı bulunamadı.</p>
+
+                <div class="mt-3">
+                    <a href="/Test/SearchCustomers" class="btn btn-primary me-2">
+                        <i class="fas fa-search"></i> Müşteri Ara
+                    </a>
+                    <a href="/Test/ApiDebug" class="btn btn-outline-secondary">
+                        <i class="fas fa-bug"></i> Debug Bilgisi
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="mt-3">
+    <div class="btn-group">
+        <a href="/Test/Customers" class="btn btn-outline-primary">
+            <i class="fas fa-sync-alt"></i> Sayfayı Yenile
+        </a>
+        <a href="/Test/ApiDebug" class="btn btn-info">
+            <i class="fas fa-bug"></i> API Debug Bilgisi
+        </a>
+        <a href="/Test/SearchCustomers" class="btn btn-success">
+            <i class="fas fa-search"></i> Müşteri Ara
+        </a>
+        <a href="/Test/Orders" class="btn btn-warning">
+            <i class="fas fa-shopping-cart"></i> Siparişleri Görüntüle
+        </a>
+    </div>
+</div>
+
+<!-- API Yanıt Bilgisi -->
+@if (Model != null)
+{
+    <div class="mt-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-info-circle"></i> API Bilgisi
+                </h6>
+            </div>
+            <div class="card-body">
+                <small class="text-muted">
+                    <strong>Toplam Kayıt:</strong> @Model.Count <br>
+                    <strong>Son Güncelleme:</strong> @DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss") <br>
+                    <strong>Endpoint:</strong> /Api/APIMethods/CariListesiV3
+                </small>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .table th {
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+    }
+
+    .badge {
+        font-family: 'Courier New', monospace;
+    }
+</style>
