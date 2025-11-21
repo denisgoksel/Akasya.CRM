@@ -1,5 +1,4 @@
-﻿
-using Akasya.CRM.Core.Services;
+﻿using Akasya.CRM.Core.Services;
 using Akasya.CRM.Infrastructure.Data;
 using Akasya.CRM.Infrastructure.Interfaces;
 using Akasya.CRM.Infrastructure.Services;
@@ -12,31 +11,34 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 
 // ---------------------------
-// MEVCUT SERVİSLER (DEĞİŞTİRMEYİN)
-// ---------------------------
-builder.Services.AddScoped<CustomerService>();
-builder.Services.AddScoped<OrderService>();
-builder.Services.AddScoped<IOrderService, OrderService>();
-builder.Services.AddScoped<ICacheService, OrderCacheService>();
-builder.Services.AddHttpClient<IOrderService, OrderService>();
-// ---------------------------
-// ✅ YENİ: CACHE SERVİSLERİ EKLENDİ
-// ---------------------------
-builder.Services.AddSingleton<ICacheService, CustomerCacheService>();
-builder.Services.AddScoped<CacheUpdateManager>();
-
-// ---------------------------
-// Database Configuration (MEVCUT - DEĞİŞTİRMEYİN)
+// Database Configuration
 // ---------------------------
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection"),
         b => b.MigrationsAssembly("Akasya.CRM.Infrastructure")
-    ));
+    )
+    //.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking) // BU SATIRI EKLEYİN
+);
 
 // ---------------------------
-// HttpClient Configuration (MEVCUT - DEĞİŞTİRMEYİN)
+// CORE SERVICES
 // ---------------------------
+builder.Services.AddScoped<CustomerService>();
+builder.Services.AddScoped<OrderService>();
+
+// ---------------------------
+// CACHE SERVICES
+// ---------------------------
+builder.Services.AddScoped<ICacheService, CustomerCacheService>();
+builder.Services.AddScoped<ICacheService, OrderCacheService>();
+builder.Services.AddScoped<CacheUpdateManager>();
+
+// ---------------------------
+// HTTP CLIENT CONFIGURATIONS
+// ---------------------------
+
+// AuthService HttpClient
 builder.Services.AddHttpClient<AuthService>(client =>
 {
     client.BaseAddress = new Uri("http://185.248.59.144:8084");
@@ -44,14 +46,14 @@ builder.Services.AddHttpClient<AuthService>(client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
-// ✅ CUSTOMER SERVICE HTTP CLIENT EKLENDİ
+// CustomerService HttpClient
 builder.Services.AddHttpClient<CustomerService>(client =>
 {
     client.BaseAddress = new Uri("http://185.248.59.144:8084");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
-// ✅ ORDER SERVICE HTTP CLIENT EKLENDİ  
+// OrderService HttpClient  
 builder.Services.AddHttpClient<OrderService>(client =>
 {
     client.BaseAddress = new Uri("http://185.248.59.144:8084");
@@ -59,7 +61,7 @@ builder.Services.AddHttpClient<OrderService>(client =>
 });
 
 // ---------------------------
-// Session Configuration (MEVCUT - DEĞİŞTİRMEYİN)
+// SESSION CONFIGURATION
 // ---------------------------
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
@@ -72,7 +74,7 @@ builder.Services.AddSession(options =>
 });
 
 // ---------------------------
-// Authentication Configuration (MEVCUT - DEĞİŞTİRMEYİN)
+// AUTHENTICATION CONFIGURATION
 // ---------------------------
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -88,7 +90,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 
 // ---------------------------
-// Authorization Policies (MEVCUT - DEĞİŞTİRMEYİN)
+// AUTHORIZATION POLICIES
 // ---------------------------
 builder.Services.AddAuthorization(options =>
 {
@@ -102,7 +104,7 @@ builder.Services.AddAuthorization(options =>
 var app = builder.Build();
 
 // ---------------------------
-// Database Migration (Development Only) (MEVCUT - DEĞİŞTİRMEYİN)
+// DATABASE MIGRATION (Development Only)
 // ---------------------------
 if (app.Environment.IsDevelopment())
 {
@@ -124,7 +126,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // ---------------------------
-// Configure HTTP Pipeline (MEVCUT - DEĞİŞTİRMEYİN)
+// CONFIGURE HTTP PIPELINE
 // ---------------------------
 if (!app.Environment.IsDevelopment())
 {
@@ -143,12 +145,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseSession();
 
-// Controller Routes (MEVCUT - DEĞİŞTİRMEYİN)
+// Controller Routes
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Fallback route - Auth controller'a yönlendir (MEVCUT - DEĞİŞTİRMEYİN)
+// Fallback route - Auth controller'a yönlendir
 app.MapFallbackToController("Login", "Auth");
 
 app.Run();

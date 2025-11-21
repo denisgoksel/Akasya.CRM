@@ -3,6 +3,8 @@ using Akasya.CRM.Infrastructure.Interfaces;
 using Akasya.CRM.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text;
+using System.Text.Json;
 
 namespace Akasya.CRM.Web.Controllers
 {
@@ -12,11 +14,13 @@ namespace Akasya.CRM.Web.Controllers
         private readonly CacheUpdateManager _cacheUpdateManager;
         private readonly ILogger<CacheUpdateController> _logger;
         private readonly IServiceProvider _services;
+        private readonly OrderService _orderService;
         public CacheUpdateController(CacheUpdateManager cacheUpdateManager, ILogger<CacheUpdateController> logger, IServiceProvider services    )
         {
             _cacheUpdateManager = cacheUpdateManager;
             _logger = logger;
             _services = services;
+            _orderService = services.GetRequiredService<OrderService>();
         }
 
         [HttpGet]
@@ -139,35 +143,46 @@ namespace Akasya.CRM.Web.Controllers
             }
         }
         [HttpPost]
-        public async Task<JsonResult> TestOrderApiConnection()
+        public async Task<IActionResult> TestOrderApiDebug()
         {
             try
             {
-                using var scope = _services.CreateScope();
-                var orderService = scope.ServiceProvider.GetRequiredService<OrderService>();
-
-                Console.WriteLine("🧪 Order API bağlantı testi başlatılıyor...");
-
-                var result = await orderService.TestApiConnectionAsync();
-
-                return Json(new
+                // Doğrudan HTTP isteği yap
+                var httpClient = new HttpClient();
+                var payload = new
                 {
-                    success = result,
-                    message = result ? "Order API bağlantısı başarılı!" : "Order API bağlantısı başarısız!",
-                    testType = "Order API"
-                });
+                    Mikro = new
+                    {
+                        ApiKey = "4kGHIj0aDNREpPD1Vmg84z9vEi63zkkipmsxukZUW0FmUot1e8p2aY1TdYLr4S0pxoVVCboVUN4ol/SwZKSWHnhlYlV2riD32qcidZR0sXk=",
+                        FirmaKodu = "TEST",
+                        CalismaYili = "2025",
+                        KullaniciKodu = "SRV",
+                        Sifre = "9b3e8c9cbcd75648f97d105b171cbbbd"
+                    },
+                    SQLSorgu = "SELECT TOP 3 * FROM SIPARISLER"
+                };
+
+                var jsonPayload = JsonSerializer.Serialize(payload);
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                var response = await httpClient.PostAsync("http://185.248.59.144:8084/Api/apiMethods/SqlVeriOkuV2", content);
+
+                var result = new
+                {
+                    StatusCode = response.StatusCode,
+                    IsSuccess = response.IsSuccessStatusCode,
+                    ResponseContent = await response.Content.ReadAsStringAsync()
+                };
+
+                return Json(result);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Order API test hatası: {ex.Message}");
-                return Json(new
-                {
-                    success = false,
-                    message = $"Order API test hatası: {ex.Message}",
-                    testType = "Order API"
-                });
+                return Json(new { Error = ex.Message });
             }
         }
+    
+         
     }
     
     public class CacheUpdateViewModel

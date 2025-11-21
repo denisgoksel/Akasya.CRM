@@ -123,6 +123,25 @@
         </div>
 
         <div class="col-md-4">
+            <!-- API Test Butonları -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-network-wired"></i> API Bağlantı Testleri
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button id="testCustomerApiBtn" class="btn btn-warning">
+                            <i class="fas fa-users"></i> Müşteri API Testi
+                        </button>
+                        <button id="testOrderApiBtn" class="btn btn-warning">
+                            <i class="fas fa-shopping-cart"></i> Sipariş API Testi
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Durum Bilgisi -->
             <div class="card">
                 <div class="card-header bg-info text-white">
@@ -155,59 +174,64 @@
                         <i class="fas fa-redo"></i> Durumu Yenile
                     </button>
                 </div>
-                <!-- API Test Butonu -->
-                <div class="card mb-4">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-network-wired"></i> API Bağlantı Testi
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <p>API bağlantısını test edin.</p>
-                        <button id="testApiBtn" class="btn btn-warning">
-                            <i class="fas fa-plug"></i> API Testi
-                        </button>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
 </div>
+<div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-code"></i> Raw JSON Görüntüle
+        </h5>
+    </div>
+    <div class="card-body">
+        <button id="rawJsonBtn" class="btn btn-dark">
+            <i class="fas fa-code"></i> Raw JSON Al
+        </button>
+    </div>
+</div>
+
 
 
 @section Scripts {
     <script>
-                // API Test butonu
-        $('#testApiBtn').click(function() {
+        $('#rawJsonBtn').click(function() {
             const button = $(this);
-            setButtonState(button, true, '<i class="fas fa-spinner fa-spin"></i> Test Ediliyor...');
+            setButtonState(button, true, '<i class="fas fa-spinner fa-spin"></i> Alınıyor...');
 
             $.ajax({
-                url: '@Url.Action("TestApiConnection", "CacheUpdate")',
+                url: '@Url.Action("TestOrderApiRawJson", "CacheUpdate")',
                 type: 'POST',
                 success: function(response) {
+                    console.log("Raw JSON Response:", response);
+
                     if (response.success) {
-                        showAlert(response.message, 'success');
+                        // JSON'u formatlı şekilde göster
+                        let formattedJson = response.rawJson;
+                        try {
+                            formattedJson = JSON.stringify(JSON.parse(response.rawJson), null, 2);
+                        } catch (e) {
+                            // Formatlama başarısız olursa orijinalini kullan
+                        }
+
                         showLogs([
-                            `🧪 API Test Sonucu: ${response.message}`,
-                            `📊 Müşteri Sayısı: ${response.customerCount}`,
-                            `👤 İlk Müşteri: ${response.firstCustomer}`
+                            `✅ Raw JSON Alındı (${response.responseLength} karakter)`,
+                            `📄 JSON:`,
+                            formattedJson
                         ]);
                     } else {
-                        showAlert(response.message, 'error');
-                        showLogs([`❌ API Test Hatası: ${response.message}`]);
+                        showAlert('Raw JSON alınamadı', 'error');
                     }
                 },
                 error: function(xhr, status, error) {
-                    showAlert('API test hatası: ' + error, 'error');
-                    showLogs([`❌ API Test Hatası: ${error}`]);
+                    showAlert('Raw JSON hatası: ' + error, 'error');
                 },
                 complete: function() {
-                    setButtonState(button, false, '<i class="fas fa-plug"></i> API Testi');
+                    setButtonState(button, false, '<i class="fas fa-code"></i> Raw JSON Al');
                 }
             });
         });
-        </script>
+    </script>
     <script>
         // Alert gösterimi
         function showAlert(message, type) {
@@ -252,6 +276,89 @@
                 button.html(text);
             }
         }
+
+        // Müşteri API Test butonu
+        $('#testCustomerApiBtn').click(function() {
+            const button = $(this);
+            setButtonState(button, true, '<i class="fas fa-spinner fa-spin"></i> Test Ediliyor...');
+
+            // Log container'ı temizle ve göster
+            $('#logContent').html('');
+            $('#logContainer').removeClass('d-none');
+
+            $.ajax({
+                url: '@Url.Action("TestApiConnection", "CacheUpdate")',
+                type: 'POST',
+                success: function(response) {
+                    const logs = [];
+
+                    if (response.success) {
+                        logs.push(`✅ Müşteri API Testi Başarılı: ${response.message}`);
+                        logs.push(`📊 Toplam Müşteri Sayısı: ${response.customerCount}`);
+                        if (response.firstCustomer) {
+                            logs.push(`👤 İlk Müşteri: ${response.firstCustomer}`);
+                        }
+                        showAlert('Müşteri API testi başarılı!', 'success');
+                    } else {
+                        logs.push(`❌ Müşteri API Testi Hatası: ${response.message}`);
+                        showAlert('Müşteri API testi başarısız!', 'error');
+                    }
+
+                    showLogs(logs);
+                },
+                error: function(xhr, status, error) {
+                    const logs = [`❌ Müşteri API Testi Hatası: ${error}`];
+                    showAlert('Müşteri API test hatası: ' + error, 'error');
+                    showLogs(logs);
+                },
+                complete: function() {
+                    setButtonState(button, false, '<i class="fas fa-users"></i> Müşteri API Testi');
+                }
+            });
+        });
+
+        // Sipariş API Test butonu
+        $('#testOrderApiBtn').click(function() {
+            const button = $(this);
+            setButtonState(button, true, '<i class="fas fa-spinner fa-spin"></i> Test Ediliyor...');
+
+            // Log container'ı temizle ve göster
+            $('#logContent').html('');
+            $('#logContainer').removeClass('d-none');
+
+            $.ajax({
+                url: '@Url.Action("TestOrderApiConnection", "CacheUpdate")',
+                type: 'POST',
+                success: function(response) {
+                    const logs = [];
+
+                    if (response.success) {
+                        logs.push(`✅ Sipariş API Testi Başarılı: ${response.message}`);
+                        logs.push(`📊 Toplam Sipariş Sayısı: ${response.orderCount || response.customerCount}`);
+                        if (response.firstOrder || response.firstCustomer) {
+                            logs.push(`📦 İlk Sipariş: ${response.firstOrder || response.firstCustomer}`);
+                        }
+                        if (response.responseTime) {
+                            logs.push(`⏱️ Yanıt Süresi: ${response.responseTime} ms`);
+                        }
+                        showAlert('Sipariş API testi başarılı!', 'success');
+                    } else {
+                        logs.push(`❌ Sipariş API Testi Hatası: ${response.message}`);
+                        showAlert('Sipariş API testi başarısız!', 'error');
+                    }
+
+                    showLogs(logs);
+                },
+                error: function(xhr, status, error) {
+                    const logs = [`❌ Sipariş API Testi Hatası: ${error}`];
+                    showAlert('Sipariş API test hatası: ' + error, 'error');
+                    showLogs(logs);
+                },
+                complete: function() {
+                    setButtonState(button, false, '<i class="fas fa-shopping-cart"></i> Sipariş API Testi');
+                }
+            });
+        });
 
         // Tümünü güncelle
         $('#updateAllBtn').click(function() {

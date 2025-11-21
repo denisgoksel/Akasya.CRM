@@ -28,10 +28,16 @@ namespace Akasya.CRM.Controllers
         }
 
         // GET: Sipariş detayı
-        public async Task<IActionResult> Details(int id)
+        public async Task<IActionResult> Details(string id)
         {
+            if (!Guid.TryParse(id, out Guid orderId))
+            {
+                TempData["Error"] = "Geçersiz sipariş ID";
+                return RedirectToAction(nameof(Index));
+            }
+
             var orders = await _orderService.GetOrdersAsync(); // tüm siparişleri çekiyoruz
-            var order = orders.FirstOrDefault(o => o.ID == id);
+            var order = orders.FirstOrDefault(o => o.GUID == orderId);
 
             if (order == null)
             {
@@ -41,5 +47,6 @@ namespace Akasya.CRM.Controllers
 
             return View(order);
         }
+
     }
 }
